@@ -89,3 +89,7 @@ In this architecture, the database is no longer a passive bucket. Instead:
 - **No Spikes:** Work is spread out evenly over time, preventing the "resource overload" spikes.
 - **Eliminate The Double-Charging Risk:** Using a message log ensures that even if a worker crashes, it knows exactly where it left off.
 - **Avoid Table-Locking:** By processing payments individually and asynchronously, we avoid locking large sets of data, keeping the database fast for everyone.
+
+## Reference
+
+This implementation is based on concepts from **Chapter 11: Stream Processing** in the book **Designing Data-Intensive Applications**.
