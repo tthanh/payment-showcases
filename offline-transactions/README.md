@@ -5,6 +5,8 @@ To show how Edge Computing handles payments without internet, balancing the need
 
 Imagine you’re on a plane with no Wi-Fi. You buy a $10 snack, tap your card, and it says "Approved" instantly.
 
+But there’s no internet. No connection to the bank. So how did your payment get approved so fast? Who said "yes"?
+
 ![alt text](image.png)
 
 Let’s see who is involved in this scenario and what they want. In this system, every player has their own goal and their own risk.
