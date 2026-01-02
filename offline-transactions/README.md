@@ -35,5 +35,26 @@ But on a plane, the terminal is cut off. To solve this, we move the compute - th
 
 ## The solution
 
-To solve the problem of offline payments, we focus on the Merchant (Airline) side. This is where the terminal handles most of the work to make the sale happen without the internet. The goal is to make the sale as fast as possible while managing the risks of being offline.
+### 1. Before Take-off (The Rules & Data)
 
+While the terminal still has a fast internet connection, it prepares for offline mode:
+- **Floor Limits:** Sets a "safe" price (like $20) so anything under that is auto-approved for speed.
+
+- **Blacklist (Risk Data):** Downloads a list of stolen or blocked cards to instantly reject "bad" cards, even without the bank.
+
+- **Passenger Metadata:** Syncs with the flight manifest, tagging each sale with seat and name for follow-up if a payment fails.
+
+### 2. During the Flight (The Edge)
+
+Once offline, the terminal acts as an independent Edge Node:
+- **Local Storage (Store and Forward):** Saves every sale in secure memory-this is the temporary source of truth.
+- **Velocity Checks:** Watches for suspicious patterns (like 5 taps in 2 minutes) and blocks cards locally if needed.
+- **Cryptographic Verification:** Checks the card’s digital signature to ensure it’s an authentic card, not a fake.
+- **Offline Chip Counters:** By EMV standards, the card chip stores **Offline Accumulators**, making it physically reject sales once "Lower" or "Upper" limits are hit until it reconnects to a bank.
+
+### 3. When Arriving (The Sync)
+
+After landing and reconnecting, the terminal syncs all sales back to the bank:
+- **Idempotency:** Each sale has a unique key so even if data is sent twice, the customer is only charged once.
+- **Compensating Transactions:** The Issuer Bank (customer's bank) honors the airline's payment first, then recovers the debt by pushing the customer’s account into a negative balance.
+- **TTL (Time-to-Live):** The Network and Issuer set a 24–48 hour window; if the Acquirer (airline's bank) submits the data late, the airline loses the right to collect the funds.
