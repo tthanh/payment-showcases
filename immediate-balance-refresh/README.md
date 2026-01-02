@@ -136,6 +136,26 @@ graph LR
 
 - **Keeps the App Fast:** The system stays quick for everyone because it only uses the main database when it absolutely has to.
 
+## When to use one or more of these solutions
+
+Most real-world payment systems use these strategies together to ensure users always see their updated balance immediately after making a payment.
+
+- **Client-Side Caching:** On the payment confirmation page, show the new balance immediately using the value returned in the payment API response. No waiting, no stale data, no extra network trip.
+
+- **Session-Based Routing:** If the user navigates to another page (like from the payment screen to their dashboard) within a short window (e.g., 5–10 seconds), keep routing reads to the Leader for a few seconds after a payment to prevent "flicker" or confusion, even if the Follower might still be catching up.
+
+- **Version-Based Consistency:** For background checks, after the stickiness window expires, or for important payment operations, make sure the Follower DB is fully up-to-date before showing the user's balance, using version numbers as a final safety net.
+
+By using one or more of these solutions, you ensure users always see their updated balance immediately after making a payment, while the system stays fast, reliable, and scalable.
+
+| Feature | Solution 1: Client-Side Caching | Solution 2: Session-Based | Solution 3: Version-Based |
+| :--- | :--- | :--- | :--- |
+| **Complexity** | Low | Medium | High |
+| **Consistency** | Local (UI-only) | Probabilistic | Strict (Global) |
+| **Implementation** | UI uses direct API response | Caches "Last Write" time | App verifies DB sequence sync |
+| **Data Integrity** | Lost on page refresh | Sensitive to lag | Guaranteed; never stale |
+| **Infrastructure** | Standard API/Frontend | Cache (Redis/Memcached) | DB support (GTIDs/LSNs) |
+
 ## Reference
 
 This implementation is based on concepts from **Chapter 5: Replication** in the book **Designing Data-Intensive Applications**, specifically the section on "Read-after-write consistency" (also known as "read-your-writes consistency").
