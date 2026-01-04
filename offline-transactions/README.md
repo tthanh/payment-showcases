@@ -1,6 +1,3 @@
-## Purpose
-To show how Edge Computing handles payments without internet, balancing the need for fast sales with the bank's need for security.
-
 ## The Problem
 
 Imagine you’re on a plane with no Wi-Fi. You buy a $10 snack, tap your card, and it says "Approved" instantly.
