@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acquirer Scalability Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .shard-node {
+            transition: all 0.3s ease;
+        }
+
+        .hot {
+            background-color: #ef4444 !important;
+            box-shadow: 0 0 15px #ef4444;
+        }
+
+        .processing {
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .transaction-dot {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #60a5fa;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen p-8 font-sans">
+
+    <div class="max-w-6xl mx-auto space-y-8">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white">Acquirer <span class="text-blue-500">Scale</span> Simulator
+                </h1>
+                <p class="text-slate-400">DDIA Principles: Partitioning, Queuing, and Throughput</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="toggleBurst()" id="burst-btn"
+                    class="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-full font-bold transition-all">
+                    TRIGGER RUSH HOUR
+                </button>
+                <button onclick="resetSim()"
+                    class="bg-slate-800 hover:bg-slate-700 text-white px-6 py-2 rounded-full font-bold">
+                    RESET
+                </button>
+            </div>
+        </div>
+
+        <!-- Metrics Dashboard -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                <div class="text-xs text-slate-500 uppercase font-bold">Incoming TPS</div>
+                <div id="tps-val" class="text-2xl font-mono text-blue-400">0</div>
+            </div>
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                <div class="text-xs text-slate-500 uppercase font-bold">Queue Depth</div>
+                <div id="queue-val" class="text-2xl font-mono text-yellow-400">0</div>
+            </div>
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                <div class="text-xs text-slate-500 uppercase font-bold">Avg Latency</div>
+                <div id="latency-val" class="text-2xl font-mono text-green-400">45ms</div>
+            </div>
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                <div class="text-xs text-slate-500 uppercase font-bold">System Health</div>
+                <div id="health-val" class="text-2xl font-mono text-green-500">STABLE</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Ingestion Layer (The Merchants) -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                    <span class="h-2 w-2 bg-blue-500 rounded-full"></span>
+                    Ingestion (Merchants)
+                </h2>
+                <div id="merchant-container"
+                    class="bg-slate-900 rounded-2xl p-6 border border-slate-800 relative h-64 flex flex-col justify-around">
+                    <div id="merchant-0"
+                        class="merchant-row flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                        <span>Local Grocery</span>
+                        <span class="text-xs text-slate-500">Low Load</span>
+                    </div>
+                    <div id="merchant-1"
+                        class="merchant-row flex items-center justify-between p-3 bg-slate-800 rounded-lg border-l-4 border-blue-500">
+                        <span class="font-bold">MEGA-MART</span>
+                        <span id="load-label" class="text-xs text-blue-400">Normal</span>
+                    </div>
+                    <div id="merchant-2"
+                        class="merchant-row flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                        <span>Coffee Shop</span>
+                        <span class="text-xs text-slate-500">Low Load</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Partitioning Layer (The Shards) -->
+            <div class="lg:col-span-2 space-y-4">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                    <span class="h-2 w-2 bg-purple-500 rounded-full"></span>
+                    Database Shards (Partitioning)
+                </h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 h-64">
+                    <div id="shard-0"
+                        class="shard-node bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2">
+                        <div class="text-[10px] text-slate-500">SHARD 01</div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div id="load-0" class="h-full bg-blue-500 transition-all duration-300" style="width: 10%">
+                            </div>
+                        </div>
+                        <div class="text-xs font-mono">ID: 00-24</div>
+                    </div>
+                    <div id="shard-1"
+                        class="shard-node bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2">
+                        <div class="text-[10px] text-slate-500">SHARD 02</div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div id="load-1" class="h-full bg-blue-500 transition-all duration-300" style="width: 15%">
+                            </div>
+                        </div>
+                        <div class="text-xs font-mono">ID: 25-49</div>
+                    </div>
+                    <div id="shard-2"
+                        class="shard-node bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2">
+                        <div class="text-[10px] text-slate-500">SHARD 03</div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div id="load-2" class="h-full bg-blue-500 transition-all duration-300" style="width: 8%">
+                            </div>
+                        </div>
+                        <div class="text-xs font-mono">ID: 50-74</div>
+                    </div>
+                    <div id="shard-3"
+                        class="shard-node bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center gap-2">
+                        <div class="text-[10px] text-slate-500">SHARD 04</div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div id="load-3" class="h-full bg-blue-500 transition-all duration-300" style="width: 12%">
+                            </div>
+                        </div>
+                        <div class="text-xs font-mono">ID: 75-99</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Explanation Footer -->
+        <div id="log"
+            class="bg-black/50 p-6 rounded-2xl border border-slate-800 font-mono text-sm h-40 overflow-y-auto">
+            <div class="text-slate-500">[SYSTEM] Booting sequence initiated...</div>
+        </div>
+    </div>
+
+    <script>
+        let isBursting = false;
+        let tps = 0;
+        let queueDepth = 0;
+        let shardLoads = [5, 5, 5, 5];
+
+        window.onload = function () {
+            log("SYSTEM: Partition nodes online. Ingestion pipes ready.");
+            setInterval(simulationHeartbeat, 200);
+        };
+
+        function simulationHeartbeat() {
+            if (isBursting) {
+                // High throughput logic
+                tps = Math.floor(Math.random() * 500) + 1500;
+                queueDepth += Math.floor(Math.random() * 100);
+
+                // Hotspot on Shard 01 (Mega-Mart mapped to Shard 0)
+                shardLoads[0] = Math.min(100, shardLoads[0] + 5);
+                shardLoads[1] = Math.min(100, shardLoads[1] + 1);
+                shardLoads[2] = Math.min(100, shardLoads[2] + 1);
+                shardLoads[3] = Math.min(100, shardLoads[3] + 1);
+
+                // Create massive traffic from Mega-Mart (Index 1) to Shard 0
+                for (let i = 0; i < 3; i++) createParticle(1, 0);
+
+                // Still keep a bit of background from others
+                if (Math.random() > 0.7) createParticle(0, 1);
+                if (Math.random() > 0.7) createParticle(2, 2);
+            } else {
+                // Background "Normal" flow
+                tps = Math.floor(Math.random() * 50) + 30;
+                queueDepth = Math.max(0, queueDepth - 30);
+
+                // Shards normalize to 10-25% capacity
+                shardLoads = shardLoads.map(l => Math.max(10, Math.min(25, l + (Math.random() * 4 - 2))));
+
+                // Randomly distribute background traffic from ALL merchants to random shards
+                const randomMerchant = Math.floor(Math.random() * 3);
+                const randomShard = Math.floor(Math.random() * 4);
+                if (Math.random() > 0.4) createParticle(randomMerchant, randomShard);
+            }
+
+            updateUI();
+            checkSystemHealth();
+        }
+
+        function checkSystemHealth() {
+            const healthEl = document.getElementById('health-val');
+            const shard0 = document.getElementById('shard-0');
+
+            if (shardLoads[0] > 80) {
+                shard0.classList.add('hot');
+                healthEl.innerText = "HOTSPOT";
+                healthEl.classList.replace('text-green-500', 'text-red-500');
+                if (Math.random() > 0.95) log("ALERT: Shard 01 reaching capacity. High Latency detected.");
+            } else {
+                shard0.classList.remove('hot');
+                healthEl.innerText = "STABLE";
+                healthEl.classList.replace('text-red-500', 'text-green-500');
+            }
+        }
+
+        function toggleBurst() {
+            isBursting = !isBursting;
+            const btn = document.getElementById('burst-btn');
+            const label = document.getElementById('load-label');
+            const mega = document.getElementById('merchant-1');
+
+            if (isBursting) {
+                btn.innerText = "STOP RUSH HOUR";
+                btn.classList.replace('bg-red-600', 'bg-slate-700');
+                label.innerText = "CRITICAL BURST";
+                label.classList.replace('text-blue-400', 'text-red-500');
+                mega.classList.add('hot', 'processing');
+                log("WARNING: Massive traffic burst detected from Mega-Mart.");
+            } else {
+                btn.innerText = "TRIGGER RUSH HOUR";
+                btn.classList.replace('bg-slate-700', 'bg-red-600');
+                label.innerText = "Normal";
+                label.classList.replace('text-red-500', 'text-blue-400');
+                mega.classList.remove('hot', 'processing');
+                log("INFO: Traffic normalized. Cleaning request buffer.");
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('tps-val').innerText = tps;
+            document.getElementById('queue-val').innerText = queueDepth;
+            document.getElementById('latency-val').innerText = (45 + (queueDepth / 150)).toFixed(0) + "ms";
+
+            shardLoads.forEach((load, i) => {
+                document.getElementById(`load-${i}`).style.width = load + "%";
+            });
+        }
+
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logEl.prepend(entry);
+        }
+
+        function createParticle(merchantIdx, shardIdx) {
+            const container = document.getElementById('merchant-container');
+            const merchantEl = document.getElementById(`merchant-${merchantIdx}`);
+
+            // Calculate starting position relative to the container
+            const mRect = merchantEl.getBoundingClientRect();
+            const cRect = container.getBoundingClientRect();
+
+            const dot = document.createElement('div');
+            dot.className = 'transaction-dot';
+            dot.style.left = (mRect.right - cRect.left - 20) + 'px';
+            dot.style.top = (mRect.top - cRect.top + (mRect.height / 2)) + 'px';
+            container.appendChild(dot);
+
+            const target = document.getElementById(`shard-${shardIdx}`);
+            const targetRect = target.getBoundingClientRect();
+            const dotRect = dot.getBoundingClientRect();
+
+            const deltaX = targetRect.left - dotRect.left + (targetRect.width / 2);
+            const deltaY = targetRect.top - dotRect.top + (targetRect.height / 2);
+
+            dot.animate([
+                { transform: 'translate(0, 0)', opacity: 1 },
+                { transform: `translate(${deltaX}px, ${deltaY}px)`, opacity: 0 }
+            ], {
+                duration: 600,
+                easing: 'ease-out'
+            }).onfinish = () => dot.remove();
+        }
+
+        function resetSim() {
+            location.reload();
+        }
+    </script>
+</body>
+
+</html>
