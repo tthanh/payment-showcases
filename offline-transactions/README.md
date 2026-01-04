@@ -32,26 +32,28 @@ In a normal store, a terminal is just a "messenger." It sends your card info to 
 
 But on a plane, the terminal is cut off. To solve this, we move the compute - the decision-making "brain" - closer to the user (the edge). The terminal becomes an Edge Node. Instead of waiting for the cloud, it authorizes your card locally and make decisions right in the aisle. This is **Edge Computing**.
 
-## The solution
+## The Solution
 
-### 1. Before Take-off (Rules & Data)
+The EMV Core Protocol performs the technical "heavy lifting" by using the secure microchip on your card to verify identity and enforce bank rules locally.
 
-While the terminal still has a fast internet connection, it prepares for offline mode:
-- **Floor Limits:** Sets a "safe" price (like $20) so anything under that is auto-approved for speed.
-- **Blacklist (Risk Data):** Downloads a list of stolen or blocked cards to instantly reject "bad" cards, even without the bank.
-- **Passenger Metadata:** Syncs with the flight manifest, tagging each sale with seat and name for follow-up if a payment fails.
+### 1. Card Chip Solutions (The Protocol)
 
-### 2. During the Flight (The Edge)
+The chip acts as a secure computer for critical offline safety checks:
 
-Once offline, the terminal acts as an independent Edge Node:
-- **Local Storage (Store and Forward):** Saves every sale in secure memory-this is the temporary source of truth.
-- **Velocity Checks:** Watches for suspicious patterns (like 5 taps in 2 minutes) and blocks cards locally if needed.
-- **Cryptographic Verification:** Checks the card’s digital signature to ensure it’s an authentic card, not a fake.
-- **Offline Chip Counters:** By EMV standards, the card chip stores **Offline Accumulators**, making it physically reject sales once "Lower" or "Upper" limits are hit until it reconnects to a bank.
+- **Identity Handshake (Tag 9F37):** The terminal uses ODA (Offline Data Authentication) to verify digital signatures. It issues a random challenge (Tag 9F37) to ensure the card is legitimate and physically present.
 
-### 3. When Arriving (Sync)
+- **Spending Cap (Tag 9F23):** The chip tracks offline taps via an internal accumulator. If the card exceeds the bank's limit (Tag 9F23), the chip declines the sale automatically to prevent overspending.
 
-After landing and reconnecting, the terminal syncs all sales back to the bank:
-- **Idempotency:** Each sale has a unique key so even if data is sent twice, the customer is only charged once.
-- **Compensating Transactions:** The Issuer Bank (customer's bank) honors the airline's payment first, then recovers the debt by pushing the customer’s account into a negative balance.
-- **TTL (Time-to-Live):** The Network and Issuer set a 24–48 hour window; if the Acquirer (airline's bank) submits the data late, the airline loses the right to collect the funds.
+### 2. Airline & Terminal Solutions (The Business Logic)
+
+The airline handles the remaining part of the transaction by layering its own business rules and recovery methods on top of the protocol:
+
+*This demo focuses on this side.*
+
+- **Merchant Safety Limits:** The airline sets a Floor Limit (e.g., $25) on the terminal. If a snack costs more than this limit, the terminal will refuse to approve it offline to minimize potential loss.
+
+- **Merchant Blacklist:** Before takeoff, the terminal downloads a list of "Risk Customers." This allows the airline to instantly reject cards that have failed to pay on previous flights.
+
+- **Passenger Metadata Mapping:** To ensure they get paid, the terminal maps every tap to the Seat Number and Name from the flight manifest. This info is stored in Tag 9F7C, turning an anonymous card into a trackable purchase.
+
+- **Batch Sync & Recovery:** Uses "Store and Forward" pattern - the terminal saves all transactions locally, then syncs them to the bank after landing. If payments are declined, the airline uses passenger metadata for recovery.
